@@ -55,6 +55,7 @@ struct ALLEGRO_DISPLAY_XGLX
    Cursor invisible_cursor;
    Cursor current_cursor;
    bool cursor_hidden;
+   bool is_system_cursor;
 
    /* Icon for this window. */
    Pixmap icon, icon_mask;
@@ -67,7 +68,7 @@ struct ALLEGRO_DISPLAY_XGLX
 
    /* al_set_mouse_xy implementation */
    bool mouse_warp;
-   
+
    _AL_COND selectioned; /* Condition variable to wait for a selection event a window. */
    bool is_selectioned;  /* Set to true when selection event received. */
 

@@ -1,6 +1,6 @@
-/*         ______   ___    ___ 
- *        /\  _  \ /\_ \  /\_ \ 
- *        \ \ \L\ \\//\ \ \//\ \      __     __   _ __   ___ 
+/*         ______   ___    ___
+ *        /\  _  \ /\_ \  /\_ \
+ *        \ \ \L\ \\//\ \ \//\ \      __     __   _ __   ___
  *         \ \  __ \ \ \ \  \ \ \   /'__`\ /'_ `\/\`'__\/ __`\
  *          \ \ \/\ \ \_\ \_ \_\ \_/\  __//\ \L\ \ \ \//\ \L\ \
  *           \ \_\ \_\/\____\/\____\ \____\ \____ \ \_\\ \____/
@@ -43,7 +43,7 @@ struct ALLEGRO_TIMER
    bool started;
    double speed_secs;
    int64_t count;
-   double counter;		/* counts down to zero=blastoff */
+   double counter;                /* counts down to zero=blastoff */
    _AL_LIST_ITEM *dtor_item;
 };
 
@@ -76,14 +76,14 @@ static bool destroy_thread = false;
 struct timespec _al_initial_uptime;
 #endif
 
-static void _init_get_uptime()
+static void _init_get_uptime(void)
 {
 #ifdef USE_UPTIME
    clock_gettime(CLOCK_UPTIME_RAW, &_al_initial_uptime);
 #endif
 }
 
-static double _al_get_uptime()
+static double _al_get_uptime(void)
 {
 #ifdef USE_UPTIME
    struct timespec now;

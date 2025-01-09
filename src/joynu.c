@@ -1,6 +1,6 @@
-/*         ______   ___    ___ 
- *        /\  _  \ /\_ \  /\_ \ 
- *        \ \ \L\ \\//\ \ \//\ \      __     __   _ __   ___ 
+/*         ______   ___    ___
+ *        /\  _  \ /\_ \  /\_ \
+ *        \ \ \L\ \\//\ \ \//\ \      __     __   _ __   ___
  *         \ \  __ \ \ \ \  \ \ \   /'__`\ /'_ `\/\`'__\/ __`\
  *          \ \ \/\ \ \_\ \_ \_\ \_/\  __//\ \L\ \ \ \//\ \L\ \
  *           \ \_\ \_\/\____\/\____\ \____\ \____ \ \_\\ \____/
@@ -9,7 +9,7 @@
  *                                           \_/__/
  *
  *      New joystick API.
- * 
+ *
  *      By Peter Wang.
  *
  *      See readme.txt for copyright information.
@@ -20,8 +20,6 @@
 
 
 #define ALLEGRO_NO_COMPATIBILITY
-
-#include <stdio.h>
 
 #include "allegro5/allegro.h"
 #include "allegro5/internal/aintern.h"
@@ -300,22 +298,6 @@ void al_get_joystick_state(ALLEGRO_JOYSTICK *joy, ALLEGRO_JOYSTICK_STATE *ret_st
    ASSERT(ret_state);
 
    new_joystick_driver->get_joystick_state(joy, ret_state);
-}
-
-
-
-uint32_t _al_get_joystick_compat_version(void)
-{
-   ALLEGRO_CONFIG *system_config = al_get_system_config();
-   const char* compat_version = al_get_config_value(system_config, "compatibility", "joystick_version");
-   if (!compat_version || strlen(compat_version) == 0)
-      return al_get_allegro_version();
-   int version = 0;
-   int sub_version = 0;
-   int wip_version = 0;
-   /* Ignore the release number, we don't expect that to make a difference */
-   sscanf(compat_version, "%2d.%2d.%2d", &version, &sub_version, &wip_version);
-   return AL_ID(version, sub_version, wip_version, 0);
 }
 
 /*

@@ -347,7 +347,7 @@ static ALLEGRO_DISPLAY_XGLX *xdpy_create_display_locked(
 
    d->is_mapped = false;
    _al_cond_init(&d->mapped);
-   
+
    d->is_selectioned = false;
    _al_cond_init(&d->selectioned);
 
@@ -532,6 +532,7 @@ static ALLEGRO_DISPLAY_XGLX *xdpy_create_display_locked(
 
    d->invisible_cursor = None; /* Will be created on demand. */
    d->current_cursor = None; /* Initially, we use the root cursor. */
+   d->is_system_cursor = true;
    d->cursor_hidden = false;
 
    d->icon = None;

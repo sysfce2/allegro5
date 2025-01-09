@@ -1,7 +1,7 @@
 #import <Cocoa/Cocoa.h>
 #import <Availability.h>
 #import <IOKit/hid/IOHIDLib.h>
-#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1100
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 110000
 #include <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #endif
 #include "allegro5/allegro.h"
@@ -46,7 +46,7 @@ static NSArray * get_filter_array(const _AL_VECTOR *patterns)
             parts = [parts subarrayWithRange:NSMakeRange(num_parts - 1, 1)];
             filter_text = [parts componentsJoinedByString: @"."];
          }
-#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1100
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 110000
          UTType *type;
          if (pattern->is_mime)
             type = [UTType typeWithMIMEType:filter_text];
@@ -113,7 +113,7 @@ bool _al_show_native_file_dialog(ALLEGRO_DISPLAY *display,
          if (_al_vector_size(&fd->fc_patterns) > 0) {
             filter_array = get_filter_array(&fd->fc_patterns);
             if (filter_array && [filter_array count] > 0) {
-#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1100
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 110000
                [panel setAllowedContentTypes:filter_array];
 #else
                [panel setAllowedFileTypes:filter_array];
@@ -158,7 +158,7 @@ bool _al_show_native_file_dialog(ALLEGRO_DISPLAY *display,
          if (_al_vector_size(&fd->fc_patterns) > 0) {
             filter_array = get_filter_array(&fd->fc_patterns);
             if (filter_array && [filter_array count] > 0) {
-#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1100
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 110000
                [panel setAllowedContentTypes:filter_array];
 #else
                [panel setAllowedFileTypes:filter_array];
@@ -230,11 +230,7 @@ int _al_show_native_message_box(ALLEGRO_DISPLAY *display,
 
 #pragma mark Text Log View
 
-#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 @interface ALLEGLogView : NSTextView <NSWindowDelegate>
-#else
-@interface ALLogView : NSTextView
-#endif
 {
 @public
    ALLEGRO_NATIVE_DIALOG *textlog;
@@ -284,12 +280,32 @@ int _al_show_native_message_box(ALLEGRO_DISPLAY *display,
 
 - (void)appendText: (NSString*)text
 {
-   NSDictionary *attributes = [NSDictionary dictionaryWithObject:[NSColor controlTextColor] forKey:NSForegroundColorAttributeName];
+   id keys[] = {NSForegroundColorAttributeName, NSFontAttributeName};
+   id objects[] = {[NSColor controlTextColor], [NSFont userFixedPitchFontOfSize: 0]};
+   int count = textlog->flags & ALLEGRO_TEXTLOG_MONOSPACE ? 2 : 1;
+   NSDictionary *attributes = [NSDictionary dictionaryWithObjects:objects forKeys:keys count:count];
    NSAttributedString *attributedString = [[[NSAttributedString alloc] initWithString:text attributes:attributes] autorelease];
    NSTextStorage* store = [self textStorage];
    [store beginEditing];
    [store appendAttributedString:attributedString];
    [store endEditing];
+}
+@end
+
+@interface ALLEGScrollView : NSScrollView <NSWindowDelegate>
+{
+}
+- (void)appendText: (NSString*)text;
+@end
+
+@implementation ALLEGScrollView
+
+- (void)appendText: (NSString*)text
+{
+   ALLEGLogView *view = (ALLEGLogView *)[self documentView];
+   [view appendText:text];
+   float bottom = view.frame.size.height;
+   [self.contentView scrollToPoint: NSMakePoint(0, bottom)];
 }
 @end
 
@@ -317,7 +333,7 @@ bool _al_open_native_text_log(ALLEGRO_NATIVE_DIALOG *textlog)
       [win setReleasedWhenClosed: NO];
       [win setTitle: @"Allegro Text Log"];
       [win setMinSize: NSMakeSize(128, 128)];
-      NSScrollView *scrollView = [[NSScrollView alloc] initWithFrame: rect];
+      ALLEGScrollView *scrollView = [[ALLEGScrollView alloc] initWithFrame: rect];
       [scrollView setHasHorizontalScroller: YES];
       [scrollView setHasVerticalScroller: YES];
       [scrollView setAutohidesScrollers: YES];
@@ -334,10 +350,6 @@ bool _al_open_native_text_log(ALLEGRO_NATIVE_DIALOG *textlog)
       [view setAutoresizingMask: NSViewHeightSizable | NSViewWidthSizable];
       [[view textContainer] setContainerSize: NSMakeSize(rect.size.width, 1000000)];
       [[view textContainer] setWidthTracksTextView: NO];
-      [view setTextColor: [NSColor grayColor]];
-      if (textlog->flags & ALLEGRO_TEXTLOG_MONOSPACE) {
-         [view setFont: [NSFont userFixedPitchFontOfSize: 0]];
-      }
       [view setEditable: NO];
       [scrollView setDocumentView: view];
 
@@ -349,7 +361,7 @@ bool _al_open_native_text_log(ALLEGRO_NATIVE_DIALOG *textlog)
 
       /* Save handles for future use. */
       textlog->window = win; // Non-owning reference
-      textlog->tl_textview = view; // Non-owning reference
+      textlog->tl_textview = scrollView; // Non-owning reference
    });
    /* Now notify al_show_native_textlog that the text log is ready. */
    textlog->is_active = true;
@@ -378,9 +390,9 @@ void _al_close_native_text_log(ALLEGRO_NATIVE_DIALOG *textlog)
 void _al_append_native_text_log(ALLEGRO_NATIVE_DIALOG *textlog)
 {
     if (textlog->is_active) {
-        ALLEGLogView *view = (ALLEGLogView *)textlog->tl_textview;
+        ALLEGScrollView *scrollView = (NSScrollView *)textlog->tl_textview;
         NSString *text = [NSString stringWithUTF8String: al_cstr(textlog->tl_pending_text)];
-        [view performSelectorOnMainThread:@selector(appendText:)
+        [scrollView performSelectorOnMainThread:@selector(appendText:)
                                withObject:text
                             waitUntilDone:NO];
 

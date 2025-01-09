@@ -24,7 +24,7 @@
 #endif
 
 /* Allow up to four extra axes for future expansion. */
-#define ALLEGRO_MOUSE_MAX_EXTRA_AXES	 4
+#define ALLEGRO_MOUSE_MAX_EXTRA_AXES   4
 
 
 typedef struct ALLEGRO_MOUSE ALLEGRO_MOUSE;
@@ -51,6 +51,14 @@ struct ALLEGRO_MOUSE_STATE
    float pressure;
    struct ALLEGRO_DISPLAY *display;
 };
+
+
+typedef enum ALLEGRO_MOUSE_BUTTON
+{
+   ALLEGRO_MOUSE_BUTTON_LEFT = 1,
+   ALLEGRO_MOUSE_BUTTON_RIGHT = 2,
+   ALLEGRO_MOUSE_BUTTON_MIDDLE = 3,
+} ALLEGRO_MOUSE_BUTTON;
 
 
 AL_FUNC(bool,           al_is_mouse_installed,  (void));

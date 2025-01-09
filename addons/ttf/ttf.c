@@ -16,6 +16,7 @@
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include FT_TRUETYPE_TABLES_H
 
 #include <stdlib.h>
 
@@ -145,9 +146,9 @@ static bool get_glyph(ALLEGRO_TTF_FONT_DATA *data,
       range->range_start = range_start;
       range->glyphs = al_calloc(RANGE_SIZE, sizeof(ALLEGRO_TTF_GLYPH_DATA));
    }
-   
-   *glyph = &range->glyphs[ft_index - range_start]; 
-   
+
+   *glyph = &range->glyphs[ft_index - range_start];
+
    /* If we're skipping cache misses and it isn't already cached, return it as invalid. */
    if (data->skip_cache_misses && !(*glyph)->page_bitmap && (*glyph)->region.x >= 0) {
       return false;
@@ -289,7 +290,7 @@ static unsigned char *alloc_glyph_region(ALLEGRO_TTF_FONT_DATA *data,
    }
 
    if (lock) {
-      char *ptr;
+      unsigned char *ptr;
       int i;
 
       data->page_lr = al_lock_bitmap_region(page,
@@ -306,9 +307,9 @@ static unsigned char *alloc_glyph_region(ALLEGRO_TTF_FONT_DATA *data,
           * to make anti-aliasing work well when rotation
           * and/or scaling transforms are in effect
           * FIXME We could clear just the border
-          */ 
+          */
          for (i = 0; i < lock_rect.h; i++) {
-            ptr = (char *)(data->page_lr->data) + (i * data->page_lr->pitch);
+            ptr = (unsigned char *)(data->page_lr->data) + (i * data->page_lr->pitch);
             int j;
             for (j = 0; j < lock_rect.w; ++j) {
                *ptr++ = 255;
@@ -324,7 +325,7 @@ static unsigned char *alloc_glyph_region(ALLEGRO_TTF_FONT_DATA *data,
           * would be faster (yet)
           */
          for (i = 0; i < lock_rect.h; i++) {
-            ptr = (char *)(data->page_lr->data) + (i * data->page_lr->pitch);
+            ptr = (unsigned char *)(data->page_lr->data) + (i * data->page_lr->pitch);
             memset(ptr, 0, lock_rect.w * 4);
          }
       }
@@ -350,7 +351,17 @@ static void copy_glyph_mono(ALLEGRO_TTF_FONT_DATA *font_data, FT_Face face,
       unsigned char *dptr = glyph_data + pitch * y;
       int bit = 0;
 
-      if (font_data->flags & ALLEGRO_NO_PREMULTIPLIED_ALPHA) {
+      if (face->glyph->bitmap.pixel_mode == FT_PIXEL_MODE_BGRA) {
+         for (x = 0; x < (int)face->glyph->bitmap.width; x++) {
+            unsigned char set = ((ptr[3] >> (7-bit)) & 1) ? 255 : 0;
+            *dptr++ = set;
+            *dptr++ = set;
+            *dptr++ = set;
+            *dptr++ = set;
+            ptr += 4;
+         }
+      }
+      else if (font_data->flags & ALLEGRO_NO_PREMULTIPLIED_ALPHA) {
          /* FIXME We could just set the alpha byte since the
           * region was cleared above when allocated
           */
@@ -393,7 +404,16 @@ static void copy_glyph_color(ALLEGRO_TTF_FONT_DATA *font_data, FT_Face face,
       unsigned char const *ptr = face->glyph->bitmap.buffer + face->glyph->bitmap.pitch * y;
       unsigned char *dptr = glyph_data + pitch * y;
 
-      if (font_data->flags & ALLEGRO_NO_PREMULTIPLIED_ALPHA) {
+      if (face->glyph->bitmap.pixel_mode == FT_PIXEL_MODE_BGRA) {
+         for (x = 0; x < (int)face->glyph->bitmap.width; x++) {
+            *dptr++ = ptr[2];
+            *dptr++ = ptr[1];
+            *dptr++ = ptr[0];
+            *dptr++ = ptr[3];
+            ptr += 4;
+         }
+      }
+      else if (font_data->flags & ALLEGRO_NO_PREMULTIPLIED_ALPHA) {
          /* FIXME We could just set the alpha byte since the
           * region was cleared above when allocated
           */
@@ -422,7 +442,7 @@ static void copy_glyph_color(ALLEGRO_TTF_FONT_DATA *font_data, FT_Face face,
 
 /* NOTE: this function may disable the bitmap hold drawing state
  * and leave the current page bitmap locked.
- * 
+ *
  * NOTE: We have previously tried to be more clever about caching multiple
  * glyphs during incidental cache misses, but found that approach to be slower.
  */
@@ -436,17 +456,26 @@ static void cache_glyph(ALLEGRO_TTF_FONT_DATA *font_data, FT_Face face,
 
     if (glyph->page_bitmap || glyph->region.x < 0)
         return;
-   
+
     /* We shouldn't ever get here, as cache misses
      * should have been set to ft_index = 0. */
     ASSERT(!(font_data->skip_cache_misses && !lock_whole_page));
 
     // FIXME: make this a config setting? FT_LOAD_FORCE_AUTOHINT
 
-    // FIXME: Investigate why some fonts don't work without the
-    // NO_BITMAP flags. Supposedly using that flag makes small sizes
-    // look bad so ideally we would not used it.
-    ft_load_flags = FT_LOAD_RENDER | FT_LOAD_NO_BITMAP;
+    ft_load_flags = FT_LOAD_RENDER;
+    if (face->num_fixed_sizes) {
+       // This is a bitmap font with fixed sizes, let's load them in
+       // color if available.
+       ft_load_flags |= FT_LOAD_COLOR;
+    }
+    else {
+       // FIXME: Investigate why some fonts don't work without the
+       // NO_BITMAP flags. Supposedly using that flag makes small sizes
+       // look bad so ideally we would not used it.
+       ft_load_flags |= FT_LOAD_NO_BITMAP;
+    }
+
     if (font_data->flags & ALLEGRO_TTF_MONOCHROME)
        ft_load_flags |= FT_LOAD_TARGET_MONO;
     if (font_data->flags & ALLEGRO_TTF_NO_AUTOHINT)
@@ -472,7 +501,7 @@ static void cache_glyph(ALLEGRO_TTF_FONT_DATA *font_data, FT_Face face,
        /* Even though this glyph has no "region", include the 2-pixel border in the size */
        glyph->region.w = w + 4;
        glyph->region.h = h + 4;
-       ALLEGRO_DEBUG("Glyph %d has zero size.\n", ft_index);
+       ALLEGRO_DEBUG("Glyph %d has zero size. (pixel mode %d)\n", ft_index, face->glyph->bitmap.pixel_mode);
        return;
     }
 
@@ -498,7 +527,7 @@ static void cache_glyph(ALLEGRO_TTF_FONT_DATA *font_data, FT_Face face,
 
 /* WARNING: It is only valid to call this function when the current page is empty
  * (or already locked), otherwise it will gibberify the current glyphs on that page.
- * 
+ *
  * This leaves the current page unlocked.
  */
 static void cache_glyphs(ALLEGRO_TTF_FONT_DATA *data, const char *text, size_t text_size)
@@ -507,7 +536,7 @@ static void cache_glyphs(ALLEGRO_TTF_FONT_DATA *data, const char *text, size_t t
    const ALLEGRO_USTR* ustr = al_ref_buffer(&info, text, text_size);
    FT_Face face = data->face;
    int pos = 0;
-   int32_t ch;  
+   int32_t ch;
 
    while ((ch = al_ustr_get_next(ustr, &pos)) >= 0) {
       ALLEGRO_TTF_GLYPH_DATA *glyph;
@@ -950,7 +979,10 @@ ALLEGRO_FONT *al_load_ttf_font_stretch_f(ALLEGRO_FILE *file,
     }
     al_destroy_path(path);
 
-    if (h > 0) {
+    if (face->num_fixed_sizes) {
+        // TODO: we always pick the first size
+        FT_Select_Size(face, 0);
+    } else if (h > 0) {
        FT_Set_Pixel_Sizes(face, w, h);
     }
     else {

@@ -102,6 +102,7 @@ void _al_xwin_destroy_mouse_cursor(ALLEGRO_MOUSE_CURSOR *cursor)
          if (!glx->cursor_hidden)
             XUndefineCursor(sysx->x11display, glx->window);
          glx->current_cursor = None;
+         glx->is_system_cursor = true;
       }
    }
 
@@ -122,13 +123,18 @@ static bool xdpy_set_mouse_cursor(ALLEGRO_DISPLAY *display,
    Display *xdisplay = system->x11display;
    Window xwindow = glx->window;
 
+   _al_mutex_lock(&system->lock);
+   if (glx->is_system_cursor && glx->current_cursor) {
+      XFreeCursor(xdisplay, glx->current_cursor);
+   }
+
    glx->current_cursor = xcursor->cursor;
+   glx->is_system_cursor = false;
 
    if (!glx->cursor_hidden) {
-      _al_mutex_lock(&system->lock);
       XDefineCursor(xdisplay, xwindow, glx->current_cursor);
-      _al_mutex_unlock(&system->lock);
    }
+   _al_mutex_unlock(&system->lock);
 
    return true;
 }
@@ -204,8 +210,11 @@ static bool xdpy_set_system_mouse_cursor(ALLEGRO_DISPLAY *display,
 
    _al_mutex_lock(&system->lock);
 
+   if (glx->is_system_cursor && glx->current_cursor) {
+      XFreeCursor(xdisplay, glx->current_cursor);
+   }
    glx->current_cursor = XCreateFontCursor(xdisplay, cursor_shape);
-   /* XXX: leak? */
+   glx->is_system_cursor = true;
 
    if (!glx->cursor_hidden) {
       XDefineCursor(xdisplay, xwindow, glx->current_cursor);

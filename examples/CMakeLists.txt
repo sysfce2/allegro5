@@ -68,6 +68,7 @@ set(DATA_IMAGES
 
 set(DATA_TTF
     DejaVuSans.ttf
+    NotoColorEmoji_Animals.ttf
     a4_font.fnt
     )
 
@@ -145,6 +146,7 @@ example(ex_draw ${FONT} ${IMAGE} ${COLOR} ${PRIM} ${DATA_IMAGES})
 example(ex_draw_bitmap ${IMAGE} ${FONT} ${DATA_IMAGES})
 example(ex_drawpixels)
 example(ex_dualies ${IMAGE})
+example(ex_emoji ${TTF} ${COLOR} ${PRIM} ${IMAGE} DATA ${DATA_TTF})
 example(ex_expose ${IMAGE} ${PRIM} ${DATA_IMAGES})
 example(ex_filter ${FONT} ${IMAGE} ${COLOR} ${DATA_IMAGES})
 example(ex_fs_resize ${IMAGE} ${PRIM} ${DATA_IMAGES})
@@ -189,7 +191,7 @@ example(ex_shader_target ${IMAGE} ${DATA_IMAGES} ${DATA_SHADERS})
 example(ex_subbitmap ${IMAGE} ${PRIM} ${DATA_IMAGES})
 example(ex_threads ${PRIM})
 example(ex_threads2)
-example(ex_timedwait)
+example(ex_timedwait ${FONT})
 example(ex_timer ${FONT} ${PRIM})
 example(ex_timer_pause)
 example(ex_touch_input ${PRIM})
